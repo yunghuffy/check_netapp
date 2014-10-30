@@ -18,9 +18,9 @@ def main():
 		print ("Invalid operation \n")
 		print_usage()
 	
-	first_reads = get_reads(read_data)
+	first_reads = get_reads(read_data, vserver_name)
 	time.sleep(1.5)
-	second_reads = get_reads(read_data)
+	second_reads = get_reads(read_data, vserver_name)
 	metric = per_second(first_reads, second_reads)
 	nag_exit(metric)
 
@@ -30,7 +30,7 @@ def main():
 
 # For starters let's create a function that gets one
 # data point at one specific point in time
-def get_reads(counter_type):
+def get_reads(counter_type, vserver_name):
 	
 	# We need to build the xml to request nfs reads info
 	# Use 'perf-object-get-instances' to get one instance
@@ -41,7 +41,7 @@ def get_reads(counter_type):
 	counters.child_add_string("counter", counter_type)
 	get_reads.child_add(counters)
 	instances = NaElement("instances")
-	instances.child_add_string("instance", "vs1_rhev1")
+	instances.child_add_string("instance", vserver_name)
 	get_reads.child_add(instances)
 
 	# Now use the above contstructed xml block to query
@@ -122,6 +122,9 @@ parser.add_option("-w", "--warning",
 parser.add_option("-c", "--critical",
 		action="store", type="int", dest="critcal",
 		help="Number of x per second for the plugin to crit. Must be greater than warn")
+parser.add_option("-e", "--vserver-name",
+        action="store", type="string", dest="vserver_name",
+        help='The vserver from which stats are gathered")
 		
 (opts, args) = parser.parse_args()
 # push these variables to the main function to determine 
@@ -132,6 +135,7 @@ pw = opts.password
 command = opts.data_type
 warn_limit = opts.warn
 crit_limit = opts.crit
+vserver_name = opts.vserver_name
 
 # Some options are mandatory
 if crit_limit =< warn_limit:
