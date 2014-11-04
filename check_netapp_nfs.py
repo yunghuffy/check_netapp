@@ -1,6 +1,7 @@
 import os
 import time
 import sys
+import socket
 from NetApp.NaServer import *
 from optparse import OptionParser
 
@@ -10,27 +11,31 @@ def main():
 	
 	# Here we need to sleep to make sure the timestamps
 	# Between the two points are at least 1 second off
-	if(command == "read_total"):
-		read_data = "read_total"
-	elif(command == "write_total"):
-		read_data = "write_total"
-	else:
-		print ("Invalid operation \n")
-		print_usage()
+	#if(command == "read_total"):
+	#	read_data = "read_total"
+	#elif(command == "write_total"):
+	#	read_data = "write_total"
+	#else:
+	#	print ("Invalid operation \n")
+	#	print_usage()
 	
-	first_reads = get_reads(read_data, vserver_name)
+	first_reads = get_reads(read_data)
 	time.sleep(1.5)
-	second_reads = get_reads(read_data, vserver_name)
+	second_reads = get_reads(read_data)
 	metric = per_second(first_reads, second_reads)
-	nag_exit(metric)
-
+	if output_style == "nagios":
+		nag_exit(metric[0], metric[1])
+	elif output_style == "graphite":
+		timestamp = int(time.time())
+		message = 'netapp.perf.%s_per_second %s %d' % (metric[1], metric[0], timestamp)
+		send_msg(message)
 # We really need to be taking in args rather than writing down creds.
 # We also need to make a user specifically to just query stats
 
 
 # For starters let's create a function that gets one
 # data point at one specific point in time
-def get_reads(counter_type, vserver_name):
+def get_reads(counter_type):
 	
 	# We need to build the xml to request nfs reads info
 	# Use 'perf-object-get-instances' to get one instance
@@ -41,7 +46,7 @@ def get_reads(counter_type, vserver_name):
 	counters.child_add_string("counter", counter_type)
 	get_reads.child_add(counters)
 	instances = NaElement("instances")
-	instances.child_add_string("instance", vserver_name)
+	instances.child_add_string("instance", "vs1_rhev1")
 	get_reads.child_add(instances)
 
 	# Now use the above contstructed xml block to query
@@ -83,22 +88,30 @@ def per_second(first_array, second_array):
 	second_value = second_array[1]
 	second_time = second_array[2]
 	per_second_metric = (second_value - first_value) / (second_time - first_time)
-	return per_second_metric
+	return per_second_metric, name
 
 # A function for proper Nagios exit codes
-def nag_exit(metric):
+def nag_exit(metric, name):
 	if (metric < warn_limit):
-		print "OK - %s %s per second" % (metric, name)
+		print "OK - %d %s per second" % (metric, name)
 		sys.exit(0)
 	elif (metric >= warn_limit) & (metric < crit_limit):
-		print "WARNING - %s %s per second" % (metric, name)
+		print "WARNING - %d %s per second" % (metric, name)
 		sys.exit(1)
 	elif (metric >= crit_limit):
-		print "CRITICAL - %s %s per second" % (metric, name)
+		print "CRITICAL - %d %s per second" % (metric, name)
 		sys.exit(2)
 	else:
-		print "UKNOWN - a bad response was received for %s" % metric
+		print "UKNOWN - a bad response was received for %s" % name
 		sys.exit(3)
+
+# A function to send info to graphite
+def send_msg(message):
+	print 'Sending: \n%s' % message
+	sock = socket.socket()
+	sock.connect((CARBON_SERVER, CARBON_PORT))
+	sock.sendall(message)
+	sock.close()
 
 # OptionParser is a much better way to handle commandline args
 
@@ -120,11 +133,10 @@ parser.add_option("-w", "--warning",
 		action="store", type="int", dest="warn",
 		help="Number of x per second for the plugin to warn. Must be less than crit")
 parser.add_option("-c", "--critical",
-		action="store", type="int", dest="critcal",
+		action="store", type="int", dest="critical",
 		help="Number of x per second for the plugin to crit. Must be greater than warn")
-parser.add_option("-e", "--vserver-name",
-        action="store", type="string", dest="vserver_name",
-        help='The vserver from which stats are gathered")
+parser.add_option("-s", "--output-style", dest="output_style",
+		help="Choose whether this will be nagios output or graphite")
 		
 (opts, args) = parser.parse_args()
 # push these variables to the main function to determine 
@@ -134,11 +146,11 @@ user = opts.user
 pw = opts.password
 command = opts.data_type
 warn_limit = opts.warn
-crit_limit = opts.crit
-vserver_name = opts.vserver_name
-
+crit_limit = opts.critical
+read_data = opts.data_type
+output_style = opts.output_style
 # Some options are mandatory
-if crit_limit =< warn_limit:
+if crit_limit <= warn_limit:
 	print "The CRITICAL threshold must be greater than the WARNING threshold."
 	parser.print_help()
 	exit(-1)
@@ -150,7 +162,12 @@ server.set_style('LOGIN')
 server.set_admin_user(user, pw)
 
 
-# Possible list/dict of metrics this script can parse:
+# Set up the carbon socket stuff
+CARBON_SERVER = 'graphite.arin.net'
+CARBON_PORT = 2003
+DELAY = 15 # secs
 
+# Possible list/dict of metrics this script can parse:
+# write_total, read_total
 
 main()
