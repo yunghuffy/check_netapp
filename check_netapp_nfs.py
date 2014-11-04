@@ -27,7 +27,7 @@ def main():
 		nag_exit(metric[0], metric[1])
 	elif output_style == "graphite":
 		timestamp = int(time.time())
-		message = 'netapp.perf.%s_per_second %s %d' % (metric[1], metric[0], timestamp)
+		message = 'netapp.perf.%s_per_second %s %d\n' % (metric[1], metric[0], timestamp)
 		send_msg(message)
 # We really need to be taking in args rather than writing down creds.
 # We also need to make a user specifically to just query stats
@@ -163,7 +163,7 @@ server.set_admin_user(user, pw)
 
 
 # Set up the carbon socket stuff
-CARBON_SERVER = 'graphite.arin.net'
+CARBON_SERVER = ur_host_here
 CARBON_PORT = 2003
 DELAY = 15 # secs
 
