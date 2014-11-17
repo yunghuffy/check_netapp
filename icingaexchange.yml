@@ -5,7 +5,7 @@ tags: Statistic
 vendor: Linux
 target: Operating System
 type: Plugin
-license: gplv3
+license: MIT 
 releases:
     -
         name: 1.0
