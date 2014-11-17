@@ -11,7 +11,15 @@ Dependencies
 ------------
 
 This plugin depends on a couple of python modules:
-* [NetApp SDK] login required for this one
+* [NetApp SDK] - login required for this one
+** I recommend moving this to an rpm for installation.
+** Otherwise you need to move the module to your python path
+(something like '/usr/lib/python2.x/site-packages)
+Create an empty __init__.py file, then run:
+```sh
+python -m compileall __init__.py
+``` 
+    
 * [optparse] Although it looks like I may need to move to argparse
 
 [NetApp SDK]:http://mysupport.netapp.com/NOW/cgi-bin/software
