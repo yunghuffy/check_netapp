@@ -1,0 +1,23 @@
+name: check_netapp
+description: "file:///README.md"
+url: "https://github.com/champain/check_netapp"
+tags: Statistic
+vendor: Linux
+target: Operating System
+type: Plugin
+license: gplv3
+releases:
+    -
+        name: 1.0
+        description: "1.0 Release"
+        files:
+            -
+                name: check_netapp.py
+                url: "file:///check_netapp.py"
+                descritption: "First release"
+                checksum: 93e19dde00530bcfd328ddb56a7c1574
+            -
+                name: check_netapp_nfs.py
+                url: "file:///check_netapp_nfs.py"
+                description: "First release"
+                checksum: d78f499f0a67980091ef10384ef231aa
