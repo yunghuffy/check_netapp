@@ -14,7 +14,7 @@ releases:
             -
                 name: check_netapp.py
                 url: "file:///check_netapp.py"
-                descritption: "First release"
+                description: "First release"
                 checksum: 93e19dde00530bcfd328ddb56a7c1574
             -
                 name: check_netapp_nfs.py
