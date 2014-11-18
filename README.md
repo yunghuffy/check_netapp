@@ -5,7 +5,7 @@ Check netapp is a nagios plugin written in python that aims to interact simply w
 Version
 -------
 
-0.1
+0.2
 
 Dependencies
 ------------
