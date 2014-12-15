@@ -26,7 +26,7 @@ class GetCounters():
 
 # Let's gather all the counters for perf_objects
 class GetAllObj():
-    def __init(self):
+    def __initi__(self):
 	return None
    	# Function to gather all performance objects into one array	
     def getList(self):
@@ -49,11 +49,28 @@ class GetAllObj():
 
 
 
-server = NaServer(REPLACEME, 1, 21)
+# Now let's create a function that takes each dictionary and spits out
+# Actual data we can use
+
+def na_parse(obj_dict):
+    good_list = []
+    bad_list = []
+    for x in obj_dict:
+        if "none" in obj_dict[x][1] and "Total" in obj_dict[x][0]:
+            good_list.append(x)
+        elif "none" in obj_dict[x][1] and "number" in obj_dict[x][0]:
+            good_list.append(x)
+        elif "none" in obj_dict[x][1]:
+            bad_list.append(x)
+        else:
+            good_list.append(x)
+    return good_list
+
+server = NaServer('localhost', 1, 21)
 # Only used for testing
 server.set_port(443)
-user = REPLACEME
-pw = REPLACEMEM
+user = 'arinapi'
+pw = 'thisthang'
 # Basic server details
 server.set_transport_type('HTTPS')
 server.set_style('LOGIN')
@@ -62,9 +79,10 @@ server.set_admin_user(user, pw)
 
 # Define a main function, more 'pythonicly'
 if __name__ == "__main__":
+    final_dict = {}
     the_app = GetAllObj()
     for i in the_app.getList():
         next_app = GetCounters(i)
-	print next_app.getOut()
-
-    
+        final_list = na_parse(next_app.getOut())
+        final_dict[i] = final_list
+    print final_dict
