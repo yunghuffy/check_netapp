@@ -11,6 +11,8 @@ def main():
         api_check()
     elif check == "cluster":
         cluster_check()
+    elif check == "aggregate":
+        aggr_check()
     else:
         volume_check(vol_name)
 # Use this to test if the API is available
@@ -150,6 +152,86 @@ def volume_check(vol_name):
         print "UNKOWN - unable to get disk stats."
         sys.exit(3)
 
+def aggr_check():
+    # A more advanced aggregate check
+    # Build the query to get information about all the aggregates
+    get_aggr = NaElement("aggr-get-iter")
+    get_aggr_query = NaElement("query")
+    get_aggr_query_attr = NaElement("aggr-attributes")
+    get_aggr_query.child_add(get_aggr_query_attr)
+    get_aggr.child_add(get_aggr_query)
+
+    # Invoke the API
+    aggr_out = server.invoke_elem(get_aggr)
+
+    # Handle an error
+    if(aggr_out.results_status() == 'failed'):
+        print ( "UNKNOWN - " + aggr_out.results_reason() + "\n")
+        sys.exit(3)
+
+    # Need to loop through all the results
+    aggr_alist = aggr_out.child_get("attributes-list")
+    aggr_attrs = aggr_alist.children_get()
+    aggr_checked = len(aggr_attrs)
+    crit_list = []
+    warn_list = []
+    for aggr_attr in aggr_attrs:
+        
+        # Aggregate name
+        aggr_name = aggr_attr.child_get_string('aggregate-name')
+
+        # Raid state and status
+        aggr_raid_attr = aggr_attr.child_get('aggr-raid-attributes')
+        aggr_raid_state = aggr_raid_attr.child_get_string('state')
+        if aggr_raid_state != 'online':
+            crit_list.append( aggr_name + " raid state is " + aggr_raid_state)
+        
+        aggr_raid_status = aggr_raid_attr.child_get_string('raid-status')
+        if aggr_raid_status != 'raid_dp, normal':
+            warn_list.append( aggr_name + " raid status is " + aggr_raid_status)
+
+        aggr_raid_consistency = aggr_raid_attr.child_get_string('is-inconsistent')
+        if aggr_raid_consistency != 'false':
+            warn_list.append(aggr_name + " raid inconsistency is " + aggr_raid_consistency)
+
+        #Getting home node
+        aggr_owner_attr = aggr_attr.child_get('aggr-ownership-attributes')
+        aggr_home_name = aggr_owner_attr.child_get_string('home-name')
+        aggr_owner_name = aggr_owner_attr.child_get_string('owner-name')
+        if aggr_home_name != aggr_owner_name:
+            warn_list.append( aggr_name + " is not home")
+
+        #Get space information
+        aggr_space_attr = aggr_attr.child_get('aggr-space-attributes')
+        aggr_percent_used = aggr_space_attr.child_get_string('percent-used-capacity')
+        if int(aggr_percent_used) > 74:
+            crit_list.append( aggr_name + " usage at " + aggr_percent_used + "%")
+        elif int(aggr_percent_used) > 70:
+            warn_list.append( aggr_name + " usage at " + aggr_percent_used + "%")
+
+        #Get inode information
+        aggr_inode_attr = aggr_attr.child_get('aggr-inode-attributes')
+        aggr_inode_percent_used = aggr_inode_attr.child_get_string('percent-inode-used-capacity')
+        if int(aggr_inode_percent_used) > 74:
+            crit_list.append( aggr_name + " inode usage at " + aggr_inode_percent_used + "%")
+        elif int(aggr_inode_percent_used) > 70:
+            warn_list.append( aggr_name + " inode usage at " + aggr_inode_percent_used + "%")
+
+    if len(crit_list) > 0:
+        crit_list_str = str(crit_list).strip('[]')
+        print "CRITICAL: There are %d crits and %d warnings. (%d aggregates checked). %s" %\
+            (len(crit_list), len(warn_list), aggr_checked, crit_list_str)
+        sys.exit(2)
+    elif len(warn_list) > 0:
+        warn_list_str = str(warn_list).strip('[]')
+        print "WARNING: There are %d warnings. (%d aggregates checked). %s" %\
+            (len(warn_list), aggr_checked, warn_list_str)
+        sys.exit(1)
+    else:
+        print "OK - (%d aggregates checked)" % (aggr_checked)
+        sys.exit(0)
+        
+
 # Use OptionParser to give us nice command line args
 
 usage = "usage: %prog [options] arg1 arg2"
@@ -165,7 +247,7 @@ parser.add_option("-p", "--password",
                 help="A password")
 parser.add_option("-k", "--check", 
                 action="store", type="string", dest="check",
-		        help="Which check to perform including vserver, api, cluster, volume")
+		        help="Which check to perform including vserver, api, cluster, volume, aggregate")
 parser.add_option("-s", "--vserver-name",
 		        action="store", type="string", dest="vserver_name",
 		        help="Define a vserver to check")
