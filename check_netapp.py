@@ -152,7 +152,7 @@ def volume_check(vol_name):
         print "UNKOWN - unable to get disk stats."
         sys.exit(3)
 
-def aggr_check():
+def aggr_check(crit_level, warn_level):
     # A more advanced aggregate check
     # Build the query to get information about all the aggregates
     get_aggr = NaElement("aggr-get-iter")
@@ -204,9 +204,9 @@ def aggr_check():
         #Get space information
         aggr_space_attr = aggr_attr.child_get('aggr-space-attributes')
         aggr_percent_used = aggr_space_attr.child_get_string('percent-used-capacity')
-        if int(aggr_percent_used) > 74:
+        if int(aggr_percent_used) > crit_perc:
             crit_list.append( aggr_name + " usage at " + aggr_percent_used + "%")
-        elif int(aggr_percent_used) > 70:
+        elif int(aggr_percent_used) > warn_perc:
             warn_list.append( aggr_name + " usage at " + aggr_percent_used + "%")
 
         #Get inode information
